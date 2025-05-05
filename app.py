@@ -8,24 +8,24 @@ from langchain.chat_models import ChatOpenAI
 import tempfile
 import os
 
-# Настройка страницы Streamlit
+
 st.set_page_config(page_title="Конституционный Ассистент", page_icon="📚")
 st.title("🤖 Ассистент по Конституции РК")
 
-# Инициализация OpenAI API ключа только через поле ввода
+
 if "OPENAI_API_KEY" not in st.session_state:
     st.session_state.OPENAI_API_KEY = ""
 
 if not st.session_state.OPENAI_API_KEY:
     st.session_state.OPENAI_API_KEY = st.text_input("Введите ваш OpenAI API ключ:", type="password")
 
-# Инициализация состояния сессии
+
 if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Загрузка и обработка документов
+
 def process_document(file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp_file:
         tmp_file.write(file.getvalue())
@@ -46,7 +46,7 @@ def process_document(file):
     os.unlink(tmp_file_path)
     return splits
 
-# Загрузка файла
+
 uploaded_file = st.file_uploader("Загрузите PDF или DOCX файл с Конституцией", type=['pdf', 'docx'])
 
 if uploaded_file and st.session_state.OPENAI_API_KEY:
@@ -57,9 +57,7 @@ if uploaded_file and st.session_state.OPENAI_API_KEY:
             st.session_state.vectorstore = FAISS.from_documents(splits, embeddings)
             st.success("Документ успешно обработан!")
 
-# Чат интерфейс
 if st.session_state.vectorstore:
-    # Отображение истории сообщений
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
@@ -68,14 +66,11 @@ if st.session_state.vectorstore:
                     for source in message["sources"]:
                         st.write(source)
 
-    # Ввод пользователя
     if prompt := st.chat_input("Задайте вопрос о Конституции РК"):
-        # Добавление сообщения пользователя
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
 
-        # Получение ответа
         with st.chat_message("assistant"):
             with st.spinner("Ищу ответ..."):
                 qa_chain = RetrievalQA.from_chain_type(
@@ -90,15 +85,12 @@ if st.session_state.vectorstore:
                 
                 response = qa_chain({"query": prompt})
                 
-                # Отображение ответа
                 st.write(response["result"])
                 
-                # Отображение источников
                 with st.expander("Источники"):
                     for doc in response.get("source_documents", []):
                         st.write(doc.page_content)
                 
-                # Сохранение сообщения ассистента
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": response["result"],
